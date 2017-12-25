@@ -3,8 +3,7 @@ var geometry = ee.Geometry.Polygon([
   [-91.54975891113281,29.559123451577964], 
   [-91.55731201171875,29.425843050184266],
   [-91.2359619140625,29.404908690410327],
-  [-91.22566223144531,29.53045010749106],
-  [-91.54975891113281,29.559123451577964]
+  [-91.22566223144531,29.53045010749106]
   ]);
 
 var l5visParams = {
@@ -20,6 +19,14 @@ var s2visParams = {
   gamma: 1,
   max: 3110,
   min: 637.5,
+  opacity: 1
+};
+
+var l8visParams = {
+  bands: ["B4","B3","B2"],
+  gamma: 1,
+  max: 0.16749024391174316,
+  min: 0.06840211153030396,
   opacity: 1
 };
 
@@ -39,6 +46,11 @@ var l5 = ee.ImageCollection('LANDSAT/LT05/C01/T1')
   
 var s2 = ee.ImageCollection('COPERNICUS/S2')
   .filterBounds(geometry);
+  
+var l8 = ee.ImageCollection('LANDSAT/LC8_L1T_TOA')
+  .filterBounds(geometry);
+
+print(l8)
 
 var modis = ee.ImageCollection('WHBU/NBAR_1YEAR')
 
@@ -110,7 +122,7 @@ var showLayer = function(year, collection, name, imageVisParam, computed) {
   image = ee.Image(image).clip(geometry)
   Map.addLayer({
     eeObject: ee.Image(image),
-   // visParams: imageVisParam,
+    visParams: imageVisParam,
     name: String(name + ': ' + year)
   });
 };
@@ -120,6 +132,9 @@ var l5ShowLayer = function(year){
 }
 var s2ShowLayer = function(year){
   showLayer(year, s2, 'Sentinel 2', s2visParams)
+}
+var l8ShowLayer = function(year){
+  showLayer(year, l8, 'Landsat 8', l8visParams)
 }
 var modisShowLayer = function(year){
   showLayer(year, modis, 'Modis', s2visParams, true)
@@ -154,9 +169,19 @@ var supervisedClassify = function(){
   Map.addLayer(classified, {min: 0, max: 1, palette: ['00FF00', 'FF0000']});
 };
 
+var getDownloadLink = function(){
+  var path = Map.layers().get(0).get('eeObject').getDownloadURL({
+  'scale': 30,
+  'crs': 'EPSG:4326',
+  });
+  print(path)
+}
+
 var label = ui.Label('Select Year:');
 var l5label = ui.Label('Landsat 5');
 var s2label = ui.Label('Sentinel 2');
+var l8label = ui.Label('Landsat 8');
+var modisLabel = ui.Label('Modis');
 
 var l5Slider = ui.Slider({
   min: 1984,
@@ -171,6 +196,14 @@ var s2Slider = ui.Slider({
   max: 2017,
   step: 1,
   onChange: s2ShowLayer,
+  style: {stretch: 'horizontal'}
+});
+
+var l8Slider = ui.Slider({
+  min: 2013,
+  max: 2017,
+  step: 1,
+  onChange: l8ShowLayer,
   style: {stretch: 'horizontal'}
 });
 
@@ -197,6 +230,11 @@ var supevisedClassBtn = ui.Button({
   onClick: supervisedClassify
 });
 
+var downloadBtn = ui.Button({
+  label: 'Get Download link',
+  onClick: getDownloadLink
+});
+
 var resetBtn = ui.Button({
   label: 'Reset',
   onClick: function(){
@@ -205,7 +243,9 @@ var resetBtn = ui.Button({
 });
 
 var panel = ui.Panel({
-  widgets: [label, l5label ,l5Slider, s2label, s2Slider, modisSlider,clusteringButton, supevisedClassBtn, vectorizeAllBtn, resetBtn],
+  widgets: [l5label ,l5Slider, s2label, s2Slider, 
+            l8label, l8Slider, modisLabel, modisSlider,clusteringButton, 
+            supevisedClassBtn, vectorizeAllBtn, resetBtn, downloadBtn],
   layout: ui.Panel.Layout.flow('vertical'),
   style: {
     position: 'bottom-left',
